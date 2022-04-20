@@ -55,3 +55,46 @@ class LaneLines:
         self.nonzero = img.nonzero()
         self.nonzerox = np.array(self.nonzero[1])
         self.nonzeroy = np.array(self.nonzero[0])
+
+    def find_lane_pixels(self, img):
+
+        assert(len(img.shape) == 2)
+
+        # Create an output image to draw on and visualize the result
+        out_img = np.dstack((img, img, img))
+
+        # function that draws the histogram
+        histogram = hist(img)
+        midpoint = histogram.shape[0]//2
+        leftx_base = np.argmax(histogram[:midpoint])
+        rightx_base = np.argmax(histogram[midpoint:]) + midpoint
+
+        # Current position to be update later for each window in nwindows
+        leftx_current = leftx_base
+        rightx_current = rightx_base
+        y_current = img.shape[0] + self.window_height//2
+
+        # Create empty lists to reveice left and right lane pixel
+        leftx, lefty, rightx, righty = [], [], [], []
+
+        # Step through the windows one by one
+        for _ in range(self.nwindows):
+            y_current -= self.window_height
+            center_left = (leftx_current, y_current)
+            center_right = (rightx_current, y_current)
+
+            good_left_x, good_left_y = self.pixels_in_window(center_left, self.margin, self.window_height)
+            good_right_x, good_right_y = self.pixels_in_window(center_right, self.margin, self.window_height)
+
+            # Append these indices to the lists
+            leftx.extend(good_left_x)
+            lefty.extend(good_left_y)
+            rightx.extend(good_right_x)
+            righty.extend(good_right_y)
+
+            if len(good_left_x) > self.minpix:
+                leftx_current = np.int32(np.mean(good_left_x))
+            if len(good_right_x) > self.minpix:
+                rightx_current = np.int32(np.mean(good_right_x))
+
+        return leftx, lefty, rightx, righty, out_img
