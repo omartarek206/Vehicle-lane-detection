@@ -98,3 +98,125 @@ class LaneLines:
                 rightx_current = np.int32(np.mean(good_right_x))
 
         return leftx, lefty, rightx, righty, out_img
+
+    def fit_poly(self, img):
+
+        leftx, lefty, rightx, righty, out_img = self.find_lane_pixels(img)
+
+        if len(lefty) > 1500:
+            self.left_fit = np.polyfit(lefty, leftx, 2)
+        if len(righty) > 1500:
+            self.right_fit = np.polyfit(righty, rightx, 2)
+
+        # Generate x and y values for plotting
+        maxy = img.shape[0] - 1
+        miny = img.shape[0] // 3
+        if len(lefty):
+            maxy = max(maxy, np.max(lefty))
+            miny = min(miny, np.min(lefty))
+
+        if len(righty):
+            maxy = max(maxy, np.max(righty))
+            miny = min(miny, np.min(righty))
+
+        ploty = np.linspace(miny, maxy, img.shape[0])
+
+        left_fitx = self.left_fit[0]*ploty**2 + self.left_fit[1]*ploty + self.left_fit[2]
+        right_fitx = self.right_fit[0]*ploty**2 + self.right_fit[1]*ploty + self.right_fit[2]
+
+        # Visualization
+        for i, y in enumerate(ploty):
+            l = int(left_fitx[i])
+            r = int(right_fitx[i])
+            y = int(y)
+            cv2.line(out_img, (l, y), (r, y), (0, 255, 0))
+
+        lR, rR, pos = self.measure_curvature()
+
+        return out_img
+
+    def plot(self, out_img):
+        np.set_printoptions(precision=6, suppress=True)
+        lR, rR, pos = self.measure_curvature()
+
+        value = None
+        if abs(self.left_fit[0]) > abs(self.right_fit[0]):
+            value = self.left_fit[0]
+        else:
+            value = self.right_fit[0]
+
+        if abs(value) <= 0.00015:
+            self.dir.append('F')
+        elif value < 0:
+            self.dir.append('L')
+        else:
+            self.dir.append('R')
+        
+        if len(self.dir) > 10:
+            self.dir.pop(0)
+
+        W = 400
+        H = 500
+        widget = np.copy(out_img[:H, :W])
+        widget //= 2
+        widget[0,:] = [0, 0, 255]
+        widget[-1,:] = [0, 0, 255]
+        widget[:,0] = [0, 0, 255]
+        widget[:,-1] = [0, 0, 255]
+        out_img[:H, :W] = widget
+
+        direction = max(set(self.dir), key = self.dir.count)
+        msg = "Keep Straight Ahead"
+        curvature_msg = "Curvature = {:.0f} m".format(min(lR, rR))
+        if direction == 'L':
+            y, x = self.left_curve_img[:,:,3].nonzero()
+            # out_img[y, x-100+W//2] = self.left_curve_img[y, x, :3]
+            msg = "Left Curve Ahead"
+        if direction == 'R':
+            y, x = self.right_curve_img[:,:,3].nonzero()
+            # out_img[y, x-100+W//2] = self.right_curve_img[y, x, :3]
+            msg = "Right Curve Ahead"
+        if direction == 'F':
+            y, x = self.keep_straight_img[:,:,3].nonzero()
+            # out_img[y, x-100+W//2] = self.keep_straight_img[y, x, :3]
+
+        cv2.putText(out_img, msg, org=(10, 240), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 255, 255), thickness=2)
+        if direction in 'LR':
+            cv2.putText(out_img, curvature_msg, org=(10, 280), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 255, 255), thickness=2)
+
+        cv2.putText(
+            out_img,
+            "Good Lane Keeping",
+            org=(10, 400),
+            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+            fontScale=1.2,
+            color=(0, 255, 0),
+            thickness=2)
+
+        cv2.putText(
+            out_img,
+            "Vehicle is {:.2f} m away from center".format(pos),
+            org=(10, 450),
+            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+            fontScale=0.66,
+            color=(255, 255, 255),
+            thickness=2)
+
+        return out_img
+
+    def measure_curvature(self):
+        ym = 30/720
+        xm = 3.7/700
+
+        left_fit = self.left_fit.copy()
+        right_fit = self.right_fit.copy()
+        y_eval = 700 * ym
+
+        # Compute R_curve (radius of curvature)
+        left_curveR =  ((1 + (2*left_fit[0] *y_eval + left_fit[1])**2)**1.5)  / np.absolute(2*left_fit[0])
+        right_curveR = ((1 + (2*right_fit[0]*y_eval + right_fit[1])**2)**1.5) / np.absolute(2*right_fit[0])
+
+        xl = np.dot(self.left_fit, [700**2, 700, 1])
+        xr = np.dot(self.right_fit, [700**2, 700, 1])
+        pos = (1280//2 - (xl+xr)//2)*xm
+        return left_curveR, right_curveR, pos 
