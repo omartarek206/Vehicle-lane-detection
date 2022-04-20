@@ -14,7 +14,7 @@ Just  open the notebook.ipynb file and run the cells.
 Note that you'll need to have jupyter installed.
 ### 2. Through bash:
 1. Open git bash
-2. Navigate to project Directory
+2. Navigate to project Directory: ``` cd project ```
 3.  Change the permissions for file.sh to execute the python script:
 ``` chmod +x file.sh```
 4. Run this command while excute the script:    
@@ -23,3 +23,5 @@ Note that you'll need to have jupyter installed.
 Where:
 - type: can be ```image``` or ```video``` depending on your media type
 - mode: can be 0 or 1 depending on whether you would like to activate debug mode (1-> debugging enabled)
+- input: is the directory for your input file
+- output: is the directory for your output file
