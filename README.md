@@ -14,9 +14,10 @@ Just  open the notebook.ipynb file and run the cells.
 Note that you'll need to have jupyter installed.
 ### 2. Through bash:
 1. Open git bash
-2.  Change the permissions for file.sh to execute the python script:
+2. Navigate to project Directory
+3.  Change the permissions for file.sh to execute the python script:
 ``` chmod +x file.sh```
-3. Run this command while excute the script:    
+4. Run this command while excute the script:    
 ``` .\file.sh <type> <mode> <input_directory> <Output_directory> ```
 
 Where:
