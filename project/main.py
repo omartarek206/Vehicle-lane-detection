@@ -50,3 +50,51 @@ class FindLaneLines:
         #debug
         pipelined = self.pipeline(img, final, bird_eye, thresholded, thresholded_lane, lane)
         return pipelined
+
+    def forward_without_debug(self, img):
+        out_img = np.copy(img)
+        # img = self.calibration.undistort(img)
+        img=out_img
+        bird_eye = self.transform.forward(img)
+        cv2.imwrite("bird_eye.jpg", bird_eye)
+        thresholded = self.thresholding.forward(bird_eye)
+        cv2.imwrite("thresholded.jpg", thresholded)
+        thresholded_lane = self.lanelines.forward(thresholded)
+        lane = self.transform.backward(thresholded_lane)
+
+        black_with_lane= cv2.addWeighted(out_img, 1, lane, 0.6, 0)
+        final = self.lanelines.plot(black_with_lane)
+        #debug
+        return final
+
+    def process_image(self,debug, input_path, output_path):
+        img = mpimg.imread(input_path)
+        if debug:
+            out_img = self.forward(img)
+        else:
+            out_img = self.forward_without_debug(img)
+        mpimg.imsave(output_path, out_img)
+
+    def process_video(self,debug, input_path, output_path):
+        clip = VideoFileClip(input_path)
+        if debug:
+            out_clip = clip.fl_image(self.forward)
+        else:
+            out_clip = clip.fl_image(self.forward_without_debug)
+        out_clip.write_videofile(output_path, audio=False)
+
+args=sys.argv
+if args[1] == "video":
+    if args[2] == "0":
+        f=FindLaneLines()
+        f.process_video(0,args[3],args[4])
+    elif args[2] == "1":
+        f = FindLaneLines()
+        f.process_video(1, args[3], args[4])
+if args[1] == "image":
+    if args[2] == "0":
+        f=FindLaneLines()
+        f.process_image(0,args[3],args[4])
+    elif args[2] == "1":
+        f = FindLaneLines()
+        f.process_image(1, args[3], args[4])
