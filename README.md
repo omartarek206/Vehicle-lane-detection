@@ -25,3 +25,5 @@ Where:
 - mode: can be 0 or 1 depending on whether you would like to activate debug mode (1-> debugging enabled)
 - input: is the directory for your input file
 - output: is the directory for your output file
+
+5. You should find the output as selected 
