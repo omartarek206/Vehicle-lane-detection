@@ -69,3 +69,50 @@ layer = net.getLayerNames()
 layer = [layer[i - 1] for i in net.getUnconnectedOutLayers()]
 writer = None
 
+def detect(frm, net, ln):
+    (H, W) = frm.shape[:2]
+    blob = cv2.dnn.blobFromImage(frm, 1 / 255.0, (416, 416), swapRB=True, crop=False)
+    net.setInput(blob)
+    start_time = time.time()
+    layerOutputs = net.forward(ln)
+    end_time = time.time()
+
+    boxes = []
+    classIds = []
+    confidences = []
+    for output in layerOutputs:
+        for detection in output:
+            scores = detection[5:]
+            classID = np.argmax(scores)
+            confidence = scores[classID]
+
+            if confidence > CONFIDENCE_THRESHOLD:
+                box = detection[0:4] * np.array([W, H, W, H])
+                (centerX, centerY, width, height) = box.astype("int")
+                x = int(centerX - (width / 2))
+                y = int(centerY - (height / 2))
+
+                boxes.append([x, y, int(width), int(height)])
+                classIds.append(classID)
+                confidences.append(float(confidence))
+
+    idxs = cv2.dnn.NMSBoxes(boxes, confidences, CONFIDENCE_THRESHOLD, NMS_THRESHOLD)
+
+    if len(idxs) > 0:
+        for i in idxs.flatten():
+            (x, y) = (boxes[i][0], boxes[i][1])
+            (w, h) = (boxes[i][2], boxes[i][3])
+
+            color = [int(c) for c in COLORS[classIds[i]]]
+            cv2.rectangle(frm, (x, y), (x + w, y + h), color, 2)
+            text = "{}: {:.4f}".format(class_names[classIds[i]], confidences[i])
+            cv2.putText(
+                frm, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2
+            )
+
+            fps_label = "FPS: %.2f" % (1 / (end_time - start_time))
+            cv2.putText(
+                frm, fps_label, (0, 25), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2
+            )
+            
+            
