@@ -35,3 +35,37 @@ parser.add_argument("-y", "--yolo", type=str, default="yolov4-tiny",
                    
 args = parser.parse_args()
 logger.info("Parsed Arguments")
+
+CONFIDENCE_THRESHOLD = args.confidence
+NMS_THRESHOLD = args.threshold
+if not Path(args.input).exists():
+    raise FileNotFoundError("Path to video file is not exist.")
+
+vc = cv2.VideoCapture(args.input)
+fps=vc.get(cv2.CAP_PROP_FPS)
+if args.yolo=="yolov4-tiny":
+    weights ="yolo/yolov4-tiny.weights"
+    labels ="yolo/labels.txt"
+    cfg ="yolo/yolov4-tiny.cfg"
+elif args.yolo=="yolov4":
+    weights ="yolov4/yolov4.weights"
+    labels ="yolov4/labels.txt"
+    cfg ="yolov4/yolov4.cfg"
+
+
+logger.info("Using {} weights ,{} configs and {} labels.".format(weights, cfg, labels))
+
+class_names = list()
+with open(labels, "r") as f:
+    class_names = [cname.strip() for cname in f.readlines()]
+
+COLORS = np.random.randint(0, 255, size=(len(class_names), 3), dtype="uint8")
+
+net = cv2.dnn.readNetFromDarknet(cfg, weights)
+net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+
+layer = net.getLayerNames()
+layer = [layer[i - 1] for i in net.getUnconnectedOutLayers()]
+writer = None
+
