@@ -27,3 +27,7 @@ Where:
 - output: is the directory for your output file
 
 5. You should find the output as selected 
+
+##to run yolo detection on video
+```python yolo_video.py -i {path of input video} -o {path of output video} -y {path of yolo folder}```
+then open output video
