@@ -115,9 +115,8 @@ def detect(frm, net, ln):
                 frm, fps_label, (0, 25), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2
             )
             
-            
-t1=time.time()
 
+t1=time.time()
 
 while cv2.waitKey(1) < 1:
     (grabbed, frame) = vc.read()
