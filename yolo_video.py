@@ -21,8 +21,7 @@ parser.add_argument("-i", "--input", type=str, default="",
                     help="path to input video file")
 parser.add_argument("-o", "--output", type=str, default="",
                     help="path to (optional) output video file")
-parser.add_argument("-d", "--display", type=int, default=1,
-                    help="display output or not (1/0)")
+
 parser.add_argument("-ht", "--height", type=int, default=1200,
                     help="height of output")
 parser.add_argument("-wt", "--width", type=int, default=700,
@@ -98,29 +97,38 @@ def detect(frm, net, ln):
     boxes = []
     classIds = []
     confidences = []
+    #loop over each layer output in yolo darknet output layers list
     for output in layerOutputs:
         for detection in output:
+            #extract scores of detections after coordintes
             scores = detection[5:]
+            #get the index of the class with the maximum score
             classID = np.argmax(scores)
+            #get the confidence of the class with the maximum score
             confidence = scores[classID]
-
+            #check if the confidence is greater than the threshold
             if confidence > CONFIDENCE_THRESHOLD:
+                #get the coordinates of the bounding box
                 box = detection[0:4] * np.array([W, H, W, H])
                 (centerX, centerY, width, height) = box.astype("int")
+                #use the center coordinates to derive the top and left corner of the bounding box
                 x = int(centerX - (width / 2))
                 y = int(centerY - (height / 2))
-
+                #update the list of bounding box coordinates, confidences, and class IDs
                 boxes.append([x, y, int(width), int(height)])
                 classIds.append(classID)
                 confidences.append(float(confidence))
-
+    #apply non-maximum supression to suppress weak, overlapping bounding boxes
     idxs = cv2.dnn.NMSBoxes(boxes, confidences, CONFIDENCE_THRESHOLD, NMS_THRESHOLD)
 
+    #check if there are any detections
     if len(idxs) > 0:
+        #loop over the indexes we are keeping
         for i in idxs.flatten():
+            #get the bounding box coordinates
             (x, y) = (boxes[i][0], boxes[i][1])
             (w, h) = (boxes[i][2], boxes[i][3])
-
+            #draw a bounding box rectangle and label on the frame
             color = [int(c) for c in COLORS[classIds[i]]]
             cv2.rectangle(frm, (x, y), (x + w, y + h), color, 2)
             text = "{}: {:.4f}".format(class_names[classIds[i]], confidences[i])
@@ -128,32 +136,41 @@ def detect(frm, net, ln):
                 frm, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2
             )
 
-            fps_label = "FPS: %.2f" % (1 / (end_time - start_time))
-            cv2.putText(
-                frm, fps_label, (0, 25), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2
-            )
+            # fps_label = "FPS: %.2f" % (1 / (end_time - start_time))
+            # cv2.putText(
+            #     frm, fps_label, (0, 25), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2
+            # )
             
-
+#time calculation
 t1=time.time()
-
+#loop over the frames of the video
 while cv2.waitKey(1) < 1:
+    #read the next frame
     (grabbed, frame) = vc.read()
+    #check if the frame was read successfully
     if not grabbed:
         break
+    #resize the frame
     frame = cv2.resize(frame, (args.height, args.width))
+    #pass the frame to the function that will detect objects
     detect(frame, net, layer)
 
-    # if args.display == 1:
-    #     # cv2.imshow("detections", frame)
 
 
+    #check if the video writer is None and there is an output file path
     if args.output != "" and writer is None:
+        #An MJPEG Movie consists of many JPEG images, one after another. Since JPEG is a compressed format, so too is MJPEG, providing a low file size when compared to image dimensions
         fourcc = cv2.VideoWriter_fourcc(*"MJPG")
+        #initialize the video writer with the output file path, fourcc, and fps
         writer = cv2.VideoWriter(
             args.output, fourcc, fps, (frame.shape[1], frame.shape[0]), True
         )
 
+    #check if the writer is not None
     if writer is not None:
+        #write each frame to the output file
         writer.write(frame)
+#calculate time of video
 t2=time.time()
+#print time of video in minutes
 print("Time taken : {0} minutes".format((t2-t1)/60))
