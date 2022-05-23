@@ -116,3 +116,27 @@ def detect(frm, net, ln):
             )
             
             
+t1=time.time()
+
+
+while cv2.waitKey(1) < 1:
+    (grabbed, frame) = vc.read()
+    if not grabbed:
+        break
+    frame = cv2.resize(frame, (args.height, args.width))
+    detect(frame, net, layer)
+
+    # if args.display == 1:
+    #     # cv2.imshow("detections", frame)
+
+
+    if args.output != "" and writer is None:
+        fourcc = cv2.VideoWriter_fourcc(*"MJPG")
+        writer = cv2.VideoWriter(
+            args.output, fourcc, fps, (frame.shape[1], frame.shape[0]), True
+        )
+
+    if writer is not None:
+        writer.write(frame)
+t2=time.time()
+print("Time taken : {0} minutes".format((t2-t1)/60))
